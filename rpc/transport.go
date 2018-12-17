@@ -132,6 +132,13 @@ func (c *Conn) dispatchRecv() {
 			c.handleMessage(msg)
 		} else if isTemporaryError(err) {
 			c.errorf("read temporary error: %v", err)
+			// If the context is cancelled, we should not retry.
+			// This is important because a read deadline being hit is marked
+			// as a temporary failure, but that may be caused by a cancelled context.
+			err := c.bg.Err()
+			if err != nil {
+				return
+			}
 		} else {
 			c.shutdown(err)
 			return
